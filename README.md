@@ -1,2 +1,1 @@
-# RuneLite Plugin
-
+# BA World Scouter
