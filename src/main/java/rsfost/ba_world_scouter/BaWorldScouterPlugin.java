@@ -40,6 +40,7 @@ public class BaWorldScouterPlugin extends Plugin
 	private Gson gson;
 
 	private boolean shouldCheckLocation;
+	private int lastRegionId;
 
 	@Override
 	protected void startUp() throws Exception
@@ -63,17 +64,20 @@ public class BaWorldScouterPlugin extends Plugin
 
 		final Player player = client.getLocalPlayer();
 		final WorldView worldView = player.getWorldView();
-		if (!worldView.isInstance())
+		final WorldPoint wp = player.getWorldLocation();
+		final int currentRegionId = wp.getRegionID();
+
+		if (!worldView.isInstance() || currentRegionId == lastRegionId)
 		{
 			return;
 		}
 
-		final WorldPoint wp = player.getWorldLocation();
-		final int regionId = WorldPoint.fromLocalInstance(client,
+		final int templateRegionId = WorldPoint.fromLocalInstance(client,
 				client.getLocalPlayer().getLocalLocation()).getRegionID();
+		log.debug("y = {}, region id = {}", wp.getY(), templateRegionId);
+		updateWorld(wp, templateRegionId);
 		shouldCheckLocation = false;
-		log.info("y = {}, region id = {}", wp.getY(), regionId);
-		updateWorld(wp, regionId);
+		lastRegionId = currentRegionId;
 	}
 
 	@Subscribe
