@@ -20,7 +20,8 @@ import java.io.IOException;
 
 @Slf4j
 @PluginDescriptor(
-	name = "BA World Scouter"
+	name = "BA World Scouter",
+	description = "Helps scout for optimal worlds for quick-starting in Barbarian Assault"
 )
 public class BaWorldScouterPlugin extends Plugin
 {
