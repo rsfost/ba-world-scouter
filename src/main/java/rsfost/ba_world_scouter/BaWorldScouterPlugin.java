@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -17,6 +18,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @Slf4j
 @PluginDescriptor(
@@ -25,7 +27,7 @@ import java.io.IOException;
 )
 public class BaWorldScouterPlugin extends Plugin
 {
-	private static final String API_BASE = "http://localhost:8000";
+	private static final String PROD_API_BASE = "https://todo";
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
 	@Inject
@@ -40,13 +42,26 @@ public class BaWorldScouterPlugin extends Plugin
 	@Inject
 	private Gson gson;
 
+	@Inject @Named("developerMode")
+	private boolean developerMode;
+
+	private String apiBaseUrl;
+
 	private boolean shouldCheckLocation;
 	private int lastRegionId;
 
 	@Override
 	protected void startUp() throws Exception
 	{
-
+		if (developerMode)
+		{
+			String apiUrl = System.getenv("BASCOUT_API_URL");
+			this.apiBaseUrl = Objects.requireNonNullElse(apiUrl, PROD_API_BASE);
+		}
+		else
+		{
+			this.apiBaseUrl = PROD_API_BASE;
+		}
 	}
 
 	@Override
@@ -105,7 +120,7 @@ public class BaWorldScouterPlugin extends Plugin
 		data.addProperty("y", wp.getY());
 		data.addProperty("region", regionId);
 		Request request = new Request.Builder()
-			.url(API_BASE + "/world/" + world)
+			.url(apiBaseUrl + "/world/" + world)
 			.put(RequestBody.create(JSON, gson.toJson(data)))
 			.build();
 		Call call = httpClient.newCall(request);
