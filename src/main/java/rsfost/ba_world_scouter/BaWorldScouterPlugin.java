@@ -19,6 +19,9 @@ import okhttp3.*;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @PluginDescriptor(
@@ -37,6 +40,9 @@ public class BaWorldScouterPlugin extends Plugin
 	private BaWorldScouterConfig config;
 
 	@Inject
+	private ScheduledExecutorService executorService;
+
+	@Inject
 	private OkHttpClient httpClient;
 
 	@Inject
@@ -46,9 +52,10 @@ public class BaWorldScouterPlugin extends Plugin
 	private boolean developerMode;
 
 	private String apiBaseUrl;
-
 	private boolean shouldCheckLocation;
 	private int lastRegionId;
+	private ScheduledFuture<?> fetchWorldsFuture;
+	private World[] worlds;
 
 	@Override
 	protected void startUp() throws Exception
@@ -62,12 +69,13 @@ public class BaWorldScouterPlugin extends Plugin
 		{
 			this.apiBaseUrl = PROD_API_BASE;
 		}
+		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::fetchWorlds, 10, 30, TimeUnit.SECONDS);
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
-
+		fetchWorldsFuture.cancel(true);
 	}
 
 	@Subscribe
@@ -111,7 +119,7 @@ public class BaWorldScouterPlugin extends Plugin
 		return configManager.getConfig(BaWorldScouterConfig.class);
 	}
 
-	private void updateWorld(WorldPoint wp, int regionId)
+	void updateWorld(WorldPoint wp, int regionId)
 	{
 		final int world = client.getWorld();
 
@@ -135,13 +143,58 @@ public class BaWorldScouterPlugin extends Plugin
 			@Override
 			public void onResponse(Call call, Response response) throws IOException
 			{
-				if (response.code() == 200)
+				try (response)
 				{
-					log.debug("Updated world info");
+					if (response.code() == 200)
+					{
+						log.debug("Updated world info");
+					}
+					else
+					{
+						log.error("Unable to update world info (http {})", response.code());
+					}
 				}
-				else
+			}
+		});
+	}
+
+	void fetchWorlds()
+	{
+		Request request = new Request.Builder()
+			.url(apiBaseUrl + "/worlds")
+			.get()
+			.build();
+		Call call = httpClient.newCall(request);
+		call.enqueue(new Callback()
+		{
+			@Override
+			public void onFailure(Call call, IOException e)
+			{
+				log.error("Network error fetching world info", e);
+			}
+
+			@Override
+			public void onResponse(Call call, Response response) throws IOException
+			{
+				try (ResponseBody respBody = response.body())
 				{
-					log.error("Unable to update world info (http {})", response.code());
+					if (response.code() == 200)
+					{
+						if (respBody == null)
+						{
+							log.error("empty response from world fetch");
+							return;
+						}
+						String json = respBody.string();
+						respBody.close();
+						World[] worlds = gson.fromJson(json, World[].class);
+						BaWorldScouterPlugin.this.worlds = worlds;
+						log.debug("Fetched latest world info");
+					}
+					else
+					{
+						log.error("Unable to fetch world info (http {})", response.code());
+					}
 				}
 			}
 		});
