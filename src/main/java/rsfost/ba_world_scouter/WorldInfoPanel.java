@@ -84,6 +84,13 @@ public class WorldInfoPanel extends PluginPanel
     void updateList()
     {
         listContainer.removeAll();
+
+        rows.sort((r1, r2) -> {
+           InstanceInfo w1 = r1.getInstanceInfo();
+           InstanceInfo w2 = r2.getInstanceInfo();
+           return w1.getWorldId() - w2.getWorldId();
+        });
+
         for (WorldTableRow row : rows)
         {
             row.setBackground(ColorScheme.DARK_GRAY_COLOR);

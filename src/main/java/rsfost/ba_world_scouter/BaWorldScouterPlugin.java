@@ -110,7 +110,6 @@ public class BaWorldScouterPlugin extends Plugin
 		clientThread.invokeLater(() -> {
 			this.worldLocations = client.getEnum(EnumID.WORLD_LOCATIONS);
 			updateWorlds();
-			log.info("{}", worldLocations);
 		});
 	}
 
@@ -250,7 +249,6 @@ public class BaWorldScouterPlugin extends Plugin
 					}
 
 					String json = respBody.string();
-					respBody.close();
 					InstanceInfo[] worlds = gson.fromJson(json, InstanceInfo[].class);
 					Arrays.stream(worlds).forEach(w -> {
 						if (allWorlds != null)

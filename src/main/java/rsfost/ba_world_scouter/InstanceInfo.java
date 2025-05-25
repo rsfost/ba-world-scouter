@@ -1,8 +1,6 @@
 package rsfost.ba_world_scouter;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import net.runelite.http.api.worlds.World;
 
