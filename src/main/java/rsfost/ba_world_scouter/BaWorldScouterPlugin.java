@@ -100,7 +100,8 @@ public class BaWorldScouterPlugin extends Plugin
 		BufferedImage icon = ImageUtil.loadImageResource(BaWorldScouterPlugin.class, "icon.png");
 		panel = new WorldInfoPanel(this);
 		navButton = NavigationButton.builder()
-			.tooltip("BP World Scouter")
+			.tooltip("BA World Scouter")
+			.priority(4)
 			.panel(panel)
 			.icon(icon)
 			.build();
