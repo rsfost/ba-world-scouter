@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 )
 public class BaWorldScouterPlugin extends Plugin
 {
-	private static final String PROD_API_BASE = "https://todo";
+	private static final String PROD_API_BASE = "https://gkcgbnux6ylar7fzz6aiztnk3a0vzoct.lambda-url.us-east-1.on.aws";
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
 	@Inject
