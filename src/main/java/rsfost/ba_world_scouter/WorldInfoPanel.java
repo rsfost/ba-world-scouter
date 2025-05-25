@@ -26,6 +26,7 @@
  */
 package rsfost.ba_world_scouter;
 
+import com.google.common.collect.Ordering;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
@@ -35,6 +36,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.function.Function;
 
 /**
  * Borrows heavily from World Hopper plugin
@@ -47,6 +49,9 @@ public class WorldInfoPanel extends PluginPanel
 
     private final BaWorldScouterPlugin plugin;
     private final JPanel listContainer;
+
+    private WorldOrder orderIndex = WorldOrder.WORLD;
+    private boolean ascendingOrder = true;
 
     private final ArrayList<WorldTableRow> rows = new ArrayList<>();
 
@@ -86,9 +91,17 @@ public class WorldInfoPanel extends PluginPanel
         listContainer.removeAll();
 
         rows.sort((r1, r2) -> {
-           InstanceInfo w1 = r1.getInstanceInfo();
-           InstanceInfo w2 = r2.getInstanceInfo();
-           return w1.getWorldId() - w2.getWorldId();
+            switch (orderIndex)
+            {
+                case INSTANCE_Y:
+                    return getCompareValue(r1, r2, row -> row.getInstanceInfo().getY());
+                case WORLD:
+                    return getCompareValue(r1, r2, row -> row.getInstanceInfo().getWorldId());
+                case LAST_UPDATED:
+                    return getCompareValue(r1, r2, row -> row.getInstanceInfo().getTime());
+                default:
+                    return 0;
+            }
         });
 
         for (WorldTableRow row : rows)
@@ -99,6 +112,17 @@ public class WorldInfoPanel extends PluginPanel
 
         listContainer.revalidate();
         listContainer.repaint();
+    }
+
+    private int getCompareValue(WorldTableRow row1, WorldTableRow row2, Function<WorldTableRow, Comparable> compareByFn)
+    {
+        Ordering<Comparable> ordering = Ordering.natural();
+        if (!ascendingOrder)
+        {
+            ordering = ordering.reverse();
+        }
+        ordering = ordering.nullsLast();
+        return ordering.compare(compareByFn.apply(row1), compareByFn.apply(row2));
     }
 
     @Override
@@ -113,13 +137,36 @@ public class WorldInfoPanel extends PluginPanel
 
     }
 
+    private void orderBy(WorldOrder order)
+    {
+        yHeader.highlight(false, ascendingOrder);
+        worldHeader.highlight(false, ascendingOrder);
+        lastUpdatedHeader.highlight(false, ascendingOrder);
+
+        switch (order)
+        {
+            case INSTANCE_Y:
+                yHeader.highlight(true, ascendingOrder);
+                break;
+            case WORLD:
+                worldHeader.highlight(true, ascendingOrder);
+                break;
+            case LAST_UPDATED:
+                lastUpdatedHeader.highlight(true, ascendingOrder);
+                break;
+        }
+
+        orderIndex = order;
+        updateList();
+    }
+
     private JPanel buildHeader()
     {
         JPanel header = new JPanel(new BorderLayout());
         JPanel leftSide = new JPanel(new BorderLayout());
         JPanel rightSide = new JPanel(new BorderLayout());
 
-        yHeader = new WorldInfoHeader("Y", false, false);
+        yHeader = new WorldInfoHeader("Y", orderIndex == WorldOrder.INSTANCE_Y, ascendingOrder);
         yHeader.setPreferredSize(new Dimension(Y_COLUMN_WIDTH, 20));
         yHeader.addMouseListener(new MouseAdapter()
         {
@@ -130,11 +177,12 @@ public class WorldInfoPanel extends PluginPanel
                 {
                     return;
                 }
-                // TODO: sorting
+                ascendingOrder = orderIndex != WorldOrder.INSTANCE_Y || !ascendingOrder;
+                orderBy(WorldOrder.INSTANCE_Y);
             }
         });
 
-        worldHeader = new WorldInfoHeader("World", false, false);
+        worldHeader = new WorldInfoHeader("World", orderIndex == WorldOrder.WORLD, ascendingOrder);
         worldHeader.setPreferredSize(new Dimension(WORLD_COLUMN_WIDTH, 20));
         worldHeader.addMouseListener(new MouseAdapter()
         {
@@ -145,11 +193,12 @@ public class WorldInfoPanel extends PluginPanel
                 {
                     return;
                 }
-                // TODO: sorting
+                ascendingOrder = orderIndex != WorldOrder.WORLD || !ascendingOrder;
+                orderBy(WorldOrder.WORLD);
             }
         });
 
-        lastUpdatedHeader = new WorldInfoHeader("Last updated", false, false);
+        lastUpdatedHeader = new WorldInfoHeader("Last updated", orderIndex == WorldOrder.LAST_UPDATED, ascendingOrder);
         lastUpdatedHeader.setPreferredSize(new Dimension(LAST_UPDATED_COLUMN_WIDTH, 20));
         lastUpdatedHeader.addMouseListener(new MouseAdapter()
         {
@@ -160,7 +209,8 @@ public class WorldInfoPanel extends PluginPanel
                 {
                     return;
                 }
-                // TODO: sorting
+                ascendingOrder = orderIndex != WorldOrder.LAST_UPDATED || !ascendingOrder;
+                orderBy(WorldOrder.LAST_UPDATED);
             }
         });
 
@@ -173,5 +223,12 @@ public class WorldInfoPanel extends PluginPanel
         header.add(rightSide, BorderLayout.CENTER);
 
         return header;
+    }
+
+    private enum WorldOrder
+    {
+        WORLD,
+        INSTANCE_Y,
+        LAST_UPDATED
     }
 }

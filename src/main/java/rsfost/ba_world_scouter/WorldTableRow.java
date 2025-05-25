@@ -133,7 +133,7 @@ public class WorldTableRow extends JPanel
         JPanel column = new JPanel(new BorderLayout());
         column.setBorder(new EmptyBorder(0, 5, 0, 5));
 
-        yField = new JLabel(Integer.toString(instanceInfo.getY()));
+        yField = new JLabel(formatInt(instanceInfo.getY()));
         yField.setFont(FontManager.getRunescapeSmallFont());
 
         column.add(yField, BorderLayout.EAST);
@@ -195,4 +195,8 @@ public class WorldTableRow extends JPanel
         }
     }
 
+    private static String formatInt(int a)
+    {
+        return String.format("%d.%dk", a / 1000, (a % 1000) / 100);
+    }
 }
