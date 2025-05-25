@@ -5,23 +5,37 @@ import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.swing.*;
 
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.WorldsFetch;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
+import net.runelite.http.api.worlds.World;
+import net.runelite.http.api.worlds.WorldResult;
 import okhttp3.*;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @PluginDescriptor(
@@ -40,6 +54,15 @@ public class BaWorldScouterPlugin extends Plugin
 	private BaWorldScouterConfig config;
 
 	@Inject
+	private WorldService worldService;
+
+	@Inject
+	private ClientToolbar clientToolbar;
+
+	@Inject
+	private ClientThread clientThread;
+
+	@Inject
 	private ScheduledExecutorService executorService;
 
 	@Inject
@@ -51,11 +74,15 @@ public class BaWorldScouterPlugin extends Plugin
 	@Inject @Named("developerMode")
 	private boolean developerMode;
 
+	private NavigationButton navButton;
+	private WorldInfoPanel panel;
+
 	private String apiBaseUrl;
 	private boolean shouldCheckLocation;
 	private int lastRegionId;
 	private ScheduledFuture<?> fetchWorldsFuture;
-	private World[] worlds;
+	private Map<Integer, World> allWorlds;
+	private EnumComposition worldLocations;
 
 	@Override
 	protected void startUp() throws Exception
@@ -69,13 +96,29 @@ public class BaWorldScouterPlugin extends Plugin
 		{
 			this.apiBaseUrl = PROD_API_BASE;
 		}
-		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::fetchWorlds, 10, 30, TimeUnit.SECONDS);
+
+		BufferedImage icon = ImageUtil.loadImageResource(BaWorldScouterPlugin.class, "icon.png");
+		panel = new WorldInfoPanel(this);
+		navButton = NavigationButton.builder()
+			.tooltip("BP World Scouter")
+			.panel(panel)
+			.icon(icon)
+			.build();
+		clientToolbar.addNavigation(navButton);
+
+		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::fetchInstanceInfo, 10, 30, TimeUnit.SECONDS);
+		clientThread.invokeLater(() -> {
+			this.worldLocations = client.getEnum(EnumID.WORLD_LOCATIONS);
+			updateWorlds();
+			log.info("{}", worldLocations);
+		});
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
 		fetchWorldsFuture.cancel(true);
+		clientToolbar.removeNavigation(navButton);
 	}
 
 	@Subscribe
@@ -99,7 +142,7 @@ public class BaWorldScouterPlugin extends Plugin
 		final int templateRegionId = WorldPoint.fromLocalInstance(client,
 				client.getLocalPlayer().getLocalLocation()).getRegionID();
 		log.debug("y = {}, region id = {}", wp.getY(), templateRegionId);
-		updateWorld(wp, templateRegionId);
+		updateInstanceInfo(wp, templateRegionId);
 		shouldCheckLocation = false;
 		lastRegionId = currentRegionId;
 	}
@@ -113,16 +156,33 @@ public class BaWorldScouterPlugin extends Plugin
 		}
 	}
 
+	@Subscribe
+	public void onWorldsFetch(WorldsFetch event)
+	{
+		updateWorlds();
+	}
+
+	private void updateWorlds()
+	{
+		WorldResult worldResult = worldService.getWorlds();
+		if (worldResult == null)
+		{
+			return;
+		}
+		List<World> worlds = worldResult.getWorlds();
+		this.allWorlds = worlds.stream().collect(Collectors.toMap(World::getId, w -> w));
+		this.worldLocations = client.getEnum(EnumID.WORLD_LOCATIONS);
+	}
+
 	@Provides
 	BaWorldScouterConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(BaWorldScouterConfig.class);
 	}
 
-	void updateWorld(WorldPoint wp, int regionId)
+	void updateInstanceInfo(WorldPoint wp, int regionId)
 	{
 		final int world = client.getWorld();
-
 		JsonObject data = new JsonObject();
 		data.addProperty("x", wp.getX());
 		data.addProperty("y", wp.getY());
@@ -158,7 +218,7 @@ public class BaWorldScouterPlugin extends Plugin
 		});
 	}
 
-	void fetchWorlds()
+	void fetchInstanceInfo()
 	{
 		Request request = new Request.Builder()
 			.url(apiBaseUrl + "/worlds")
@@ -178,23 +238,34 @@ public class BaWorldScouterPlugin extends Plugin
 			{
 				try (ResponseBody respBody = response.body())
 				{
-					if (response.code() == 200)
-					{
-						if (respBody == null)
-						{
-							log.error("empty response from world fetch");
-							return;
-						}
-						String json = respBody.string();
-						respBody.close();
-						World[] worlds = gson.fromJson(json, World[].class);
-						BaWorldScouterPlugin.this.worlds = worlds;
-						log.debug("Fetched latest world info");
-					}
-					else
+					if (!response.isSuccessful())
 					{
 						log.error("Unable to fetch world info (http {})", response.code());
+						return;
 					}
+					if (respBody == null)
+					{
+						log.error("empty response from world fetch");
+						return;
+					}
+
+					String json = respBody.string();
+					respBody.close();
+					InstanceInfo[] worlds = gson.fromJson(json, InstanceInfo[].class);
+					Arrays.stream(worlds).forEach(w -> {
+						if (allWorlds != null)
+						{
+							w.setWorld(allWorlds.get(w.getWorldId()));
+						}
+						if (worldLocations != null)
+						{
+							w.setWorldLocation(worldLocations.getIntValue(w.getWorldId()));
+						}
+					});
+					log.debug("Fetched latest world info");
+					SwingUtilities.invokeLater(() -> {
+						panel.populate(worlds);
+					});
 				}
 			}
 		});
