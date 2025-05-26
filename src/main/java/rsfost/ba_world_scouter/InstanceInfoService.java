@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 class InstanceInfoService
 {
-    private static final String API_BASE = "https://dcjyopnktd.execute-api.us-east-1.amazonaws.com";
+    private static final String API_BASE = "https://gkcgbnux6ylar7fzz6aiztnk3a0vzoct.lambda-url.us-east-1.on.aws";
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
     private final Client client;
