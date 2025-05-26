@@ -41,7 +41,7 @@ import java.util.function.Function;
 /**
  * Borrows heavily from World Hopper plugin
  */
-public class WorldInfoPanel extends PluginPanel
+class WorldInfoPanel extends PluginPanel
 {
     private static final Color ODD_ROW = new Color(44, 44, 44);
 

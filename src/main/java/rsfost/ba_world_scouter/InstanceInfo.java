@@ -6,7 +6,7 @@ import net.runelite.http.api.worlds.World;
 
 @Data
 @RequiredArgsConstructor
-public class InstanceInfo
+class InstanceInfo
 {
     private final int worldId;
     private final int y;

@@ -40,7 +40,7 @@ import java.time.Instant;
 /**
  * Borrows heavily from World Hopper plugin
  */
-public class WorldTableRow extends JPanel
+class WorldTableRow extends JPanel
 {
     private static final ImageIcon FLAG_AUS;
     private static final ImageIcon FLAG_UK;

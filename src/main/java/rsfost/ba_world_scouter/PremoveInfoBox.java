@@ -8,7 +8,7 @@ import net.runelite.client.ui.overlay.infobox.InfoBox;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 
-public class PremoveInfoBox extends InfoBox
+class PremoveInfoBox extends InfoBox
 {
     @Getter
     @Setter

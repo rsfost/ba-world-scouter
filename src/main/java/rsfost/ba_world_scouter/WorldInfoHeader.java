@@ -39,7 +39,7 @@ import java.awt.image.BufferedImage;
 /**
  * Borrows heavily from World Hopper plugin
  */
-public class WorldInfoHeader extends JPanel
+class WorldInfoHeader extends JPanel
 {
     private static final ImageIcon ARROW_UP;
     private static final ImageIcon HIGHLIGHT_ARROW_DOWN;
