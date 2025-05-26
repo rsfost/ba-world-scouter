@@ -43,6 +43,8 @@ import java.util.function.Function;
  */
 public class WorldInfoPanel extends PluginPanel
 {
+    private static final Color ODD_ROW = new Color(44, 44, 44);
+
     private static final int WORLD_COLUMN_WIDTH = 60;
     private static final int Y_COLUMN_WIDTH = 40;
     private static final int LAST_UPDATED_COLUMN_WIDTH = 47;
@@ -104,9 +106,10 @@ public class WorldInfoPanel extends PluginPanel
             }
         });
 
-        for (WorldTableRow row : rows)
+        for (int i = 0; i < rows.size(); ++i)
         {
-            row.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            WorldTableRow row = rows.get(i);
+            row.setBackground(i % 2 == 0 ? ODD_ROW : ColorScheme.DARK_GRAY_COLOR);
             listContainer.add(row);
         }
 

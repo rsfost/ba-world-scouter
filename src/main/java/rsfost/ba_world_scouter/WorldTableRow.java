@@ -150,7 +150,11 @@ public class WorldTableRow extends JPanel
         Instant now = Instant.now();
         long minutes = Duration.between(timestamp, now).toMinutes();
 
-        if (minutes == 1)
+        if (minutes == 0)
+        {
+            lastUpdatedField = new JLabel("Just now");
+        }
+        else if (minutes == 1)
         {
             lastUpdatedField = new JLabel("1 min ago");
         }
