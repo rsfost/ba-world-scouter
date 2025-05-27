@@ -41,7 +41,7 @@ import static rsfost.ba_world_scouter.BaWorldScouterConfig.*;
 @Slf4j
 @PluginDescriptor(
 	name = "BA World Scouter",
-	description = "Helps scout for optimal worlds for quick-starting in Barbarian Assault"
+	description = "Helps scout for worlds with good quick-start conditions in Barbarian Assault"
 )
 public class BaWorldScouterPlugin extends Plugin
 {
