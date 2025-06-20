@@ -81,6 +81,7 @@ public class BaWorldScouterPlugin extends Plugin
 	private WorldInfoPanel panel;
 
 	private PremoveInfoBox premoveInfoBox;
+	private boolean premoveInfoBoxVisible;
 
 	private boolean shouldCheckLocation;
 	private int lastRegionId;
@@ -102,7 +103,10 @@ public class BaWorldScouterPlugin extends Plugin
 		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::updateWorlds, 10, 30, TimeUnit.SECONDS);
 		eventBus.register(instanceInfoService);
 
-		premoveInfoBox = new PremoveInfoBox(itemManager.getImage(ItemID.TRAIL_WATCH), this);
+		if (premoveInfoBox == null)
+		{
+			premoveInfoBox = new PremoveInfoBox(itemManager.getImage(ItemID.TRAIL_WATCH), this);
+		}
 	}
 
 	@Override
@@ -111,7 +115,7 @@ public class BaWorldScouterPlugin extends Plugin
 		fetchWorldsFuture.cancel(true);
 		clientToolbar.removeNavigation(navButton);
 		eventBus.unregister(instanceInfoService);
-		infoBoxManager.removeInfoBox(premoveInfoBox);
+		setInfoBoxVisible(false);
 	}
 
 	@Subscribe
@@ -129,7 +133,7 @@ public class BaWorldScouterPlugin extends Plugin
 
 		if (!worldView.isInstance())
 		{
-			infoBoxManager.removeInfoBox(premoveInfoBox);
+			setInfoBoxVisible(false);
 			return;
 		}
 		if (currentRegionId == lastRegionId)
@@ -209,7 +213,7 @@ public class BaWorldScouterPlugin extends Plugin
 				premoveInfoBox.setGoodPremove(goodPremove);
 				premoveInfoBox.setText(yStr);
 				premoveInfoBox.setTooltip(premoveStr);
-				infoBoxManager.addInfoBox(premoveInfoBox);
+				setInfoBoxVisible(true);
 		}
 		switch (config.indicatorDisplayMode())
 		{
@@ -223,6 +227,19 @@ public class BaWorldScouterPlugin extends Plugin
 					.runeLiteFormattedMessage(message)
 					.build());
 		}
+	}
+
+	private void setInfoBoxVisible(boolean visible)
+	{
+		if (visible && !this.premoveInfoBoxVisible)
+		{
+			infoBoxManager.addInfoBox(premoveInfoBox);
+		}
+		else if (!visible && this.premoveInfoBoxVisible)
+		{
+			infoBoxManager.removeInfoBox(premoveInfoBox);
+		}
+		this.premoveInfoBoxVisible = visible;
 	}
 
 	private static String formatInt(int a)
