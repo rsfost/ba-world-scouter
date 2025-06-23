@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -31,24 +32,39 @@ class InstanceInfoService
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
     private final Client client;
+    private final ClientThread clientThread;
     private final WorldService worldService;
     private final OkHttpClient httpClient;
     private final Gson gson;
 
-    private Map<Integer, World> allWorlds;
-    private EnumComposition worldLocations;
+    private volatile Map<Integer, World> allWorlds;
+    private volatile EnumComposition worldLocations;
 
     @Inject
     public InstanceInfoService(
-        Client client, ClientThread clientThread, WorldService worldService,
-        OkHttpClient httpClient, Gson gson)
+        Client client, ClientThread clientThread, ScheduledExecutorService executorService,
+        WorldService worldService, OkHttpClient httpClient, Gson gson)
     {
         this.client = client;
+        this.clientThread = clientThread;
         this.worldService = worldService;
         this.httpClient = httpClient;
         this.gson = gson;
 
-        clientThread.invokeLater(this::updateWorlds);
+        // Get initial world list
+        clientThread.invokeLater(() -> {
+            if (client.getGameState().getState() < GameState.LOGIN_SCREEN.getState())
+            {
+                return false;
+            }
+            executorService.execute(() -> {
+                if (!this.updateWorlds())
+                {
+                    log.warn("Failed to get initial world list.");
+                }
+            });
+            return true;
+        });
     }
 
     public void putInstanceInfo(WorldPoint wp, int regionId)
@@ -165,7 +181,9 @@ class InstanceInfoService
 
         List<World> worlds = worldResult.getWorlds();
         this.allWorlds = worlds.stream().collect(Collectors.toMap(World::getId, w -> w));
-        this.worldLocations = client.getEnum(EnumID.WORLD_LOCATIONS);
+        clientThread.invokeLater(() -> {
+            this.worldLocations = client.getEnum(EnumID.WORLD_LOCATIONS);
+        });
 
         return true;
     }
