@@ -175,6 +175,7 @@ public class BaWorldScouterPlugin extends Plugin
 			},
 			error -> {
 				log.error("Unable to update instance information", error);
+				panel.updateList();
 			}
 		);
 	}

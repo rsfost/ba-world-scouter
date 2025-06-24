@@ -146,24 +146,13 @@ class WorldTableRow extends JPanel
         JPanel column = new JPanel(new BorderLayout());
         column.setBorder(new EmptyBorder(0, 5, 0, 5));
 
-        Instant timestamp = Instant.ofEpochSecond(instanceInfo.getTime());
-        Instant now = Instant.now();
-        long minutes = Duration.between(timestamp, now).toMinutes();
-
-        if (minutes == 0)
-        {
-            lastUpdatedField = new JLabel("Just now");
-        }
-        else if (minutes == 1)
-        {
-            lastUpdatedField = new JLabel("1 min ago");
-        }
-        else
-        {
-            lastUpdatedField = new JLabel(String.format("%d mins ago", minutes));
-        }
+        lastUpdatedField = new JLabel() {
+            @Override
+            public String getText() {
+                return formatTime(instanceInfo.getTime());
+            }
+        };
         lastUpdatedField.setFont(FontManager.getRunescapeSmallFont());
-
         column.add(lastUpdatedField, BorderLayout.EAST);
 
         return column;
@@ -196,6 +185,26 @@ class WorldTableRow extends JPanel
                 return FLAG_GER;
             default:
                 return null;
+        }
+    }
+
+    private static String formatTime(long time)
+    {
+        Instant timestamp = Instant.ofEpochSecond(time);
+        Instant now = Instant.now();
+        long minutes = Duration.between(timestamp, now).toMinutes();
+
+        if (minutes == 0)
+        {
+            return "Just now";
+        }
+        else if (minutes == 1)
+        {
+            return "1 min ago";
+        }
+        else
+        {
+            return String.format("%d mins ago", minutes);
         }
     }
 
