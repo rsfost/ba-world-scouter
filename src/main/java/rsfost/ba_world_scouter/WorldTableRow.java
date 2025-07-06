@@ -51,6 +51,7 @@ class WorldTableRow extends JPanel
 
     private static final int WORLD_COLUMN_WIDTH = 60;
     private static final int Y_COLUMN_WIDTH = 40;
+    private static final int POPULATION_COLUMN_WIDTH = 45;
     private static final int LAST_UPDATED_COLUMN_WIDTH = 70;
 
     static
@@ -71,6 +72,7 @@ class WorldTableRow extends JPanel
 
     private JLabel worldField;
     private JLabel yField;
+    private JLabel popField;
     private JLabel lastUpdatedField;
 
     public WorldTableRow(InstanceInfo instanceInfo)
@@ -92,12 +94,17 @@ class WorldTableRow extends JPanel
         yField.setPreferredSize(new Dimension(Y_COLUMN_WIDTH, 20));
         yField.setOpaque(false);
 
+        JPanel popField = buildPopField();
+        popField.setPreferredSize(new Dimension(POPULATION_COLUMN_WIDTH, 20));
+        popField.setOpaque(false);
+
         JPanel lastUpdatedField = buildLastUpdatedField();
         lastUpdatedField.setPreferredSize(new Dimension(LAST_UPDATED_COLUMN_WIDTH, 20));
         lastUpdatedField.setOpaque(false);
 
         leftSide.add(worldField, BorderLayout.WEST);
         leftSide.add(yField, BorderLayout.CENTER);
+        leftSide.add(popField, BorderLayout.EAST);
         rightSide.add(lastUpdatedField, BorderLayout.EAST);
 
         add(leftSide, BorderLayout.WEST);
@@ -137,6 +144,27 @@ class WorldTableRow extends JPanel
         yField.setFont(FontManager.getRunescapeSmallFont());
 
         column.add(yField, BorderLayout.EAST);
+
+        return column;
+    }
+
+    private JPanel buildPopField()
+    {
+        JPanel column = new JPanel(new BorderLayout());
+        column.setBorder(new EmptyBorder(0, 5, 0, 5));
+
+        if (instanceInfo.getWorld() != null)
+        {
+            popField = new JLabel(Integer.toString(instanceInfo.getWorld().getPlayers()));
+        }
+        else
+        {
+            popField = new JLabel("?");
+        }
+
+        popField.setFont(FontManager.getRunescapeSmallFont());
+
+        column.add(popField, BorderLayout.EAST);
 
         return column;
     }

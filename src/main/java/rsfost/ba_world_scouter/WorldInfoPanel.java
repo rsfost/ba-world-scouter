@@ -47,6 +47,7 @@ class WorldInfoPanel extends PluginPanel
 
     private static final int WORLD_COLUMN_WIDTH = 60;
     private static final int Y_COLUMN_WIDTH = 40;
+    private static final int POPULATION_COLUMN_WIDTH = 45;
     private static final int LAST_UPDATED_COLUMN_WIDTH = 47;
 
     private final BaWorldScouterPlugin plugin;
@@ -59,6 +60,7 @@ class WorldInfoPanel extends PluginPanel
 
     private WorldInfoHeader worldHeader;
     private WorldInfoHeader yHeader;
+    private WorldInfoHeader popHeader;
     private WorldInfoHeader lastUpdatedHeader;
 
     public WorldInfoPanel(BaWorldScouterPlugin plugin)
@@ -99,6 +101,14 @@ class WorldInfoPanel extends PluginPanel
                     return getCompareValue(r1, r2, row -> row.getInstanceInfo().getY());
                 case WORLD:
                     return getCompareValue(r1, r2, row -> row.getInstanceInfo().getWorldId());
+                case POPULATION:
+                    return getCompareValue(r1, r2, row -> {
+                        if (row.getInstanceInfo().getWorld() == null)
+                        {
+                            return Integer.MAX_VALUE;
+                        }
+                        return row.getInstanceInfo().getWorld().getPlayers();
+                    });
                 case LAST_UPDATED:
                     return getCompareValue(r1, r2, row -> row.getInstanceInfo().getTime());
                 default:
@@ -144,6 +154,7 @@ class WorldInfoPanel extends PluginPanel
     {
         yHeader.highlight(false, ascendingOrder);
         worldHeader.highlight(false, ascendingOrder);
+        popHeader.highlight(false, ascendingOrder);
         lastUpdatedHeader.highlight(false, ascendingOrder);
 
         switch (order)
@@ -153,6 +164,9 @@ class WorldInfoPanel extends PluginPanel
                 break;
             case WORLD:
                 worldHeader.highlight(true, ascendingOrder);
+                break;
+            case POPULATION:
+                popHeader.highlight(true, ascendingOrder);
                 break;
             case LAST_UPDATED:
                 lastUpdatedHeader.highlight(true, ascendingOrder);
@@ -201,6 +215,22 @@ class WorldInfoPanel extends PluginPanel
             }
         });
 
+        popHeader = new WorldInfoHeader("Pop", orderIndex == WorldOrder.POPULATION, ascendingOrder);
+        popHeader.setPreferredSize(new Dimension(POPULATION_COLUMN_WIDTH, 20));
+        popHeader.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent e)
+            {
+                if (SwingUtilities.isRightMouseButton(e))
+                {
+                    return;
+                }
+                ascendingOrder = orderIndex != WorldOrder.POPULATION || !ascendingOrder;
+                orderBy(WorldOrder.POPULATION);
+            }
+        });
+
         lastUpdatedHeader = new WorldInfoHeader("Last updated", orderIndex == WorldOrder.LAST_UPDATED, ascendingOrder);
         lastUpdatedHeader.setPreferredSize(new Dimension(LAST_UPDATED_COLUMN_WIDTH, 20));
         lastUpdatedHeader.addMouseListener(new MouseAdapter()
@@ -219,6 +249,7 @@ class WorldInfoPanel extends PluginPanel
 
         leftSide.add(worldHeader, BorderLayout.WEST);
         leftSide.add(yHeader, BorderLayout.CENTER);
+        leftSide.add(popHeader, BorderLayout.EAST);
 
         rightSide.add(lastUpdatedHeader, BorderLayout.CENTER);
 
@@ -232,6 +263,7 @@ class WorldInfoPanel extends PluginPanel
     {
         WORLD,
         INSTANCE_Y,
+        POPULATION,
         LAST_UPDATED
     }
 }
