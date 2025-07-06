@@ -9,9 +9,28 @@ import net.runelite.http.api.worlds.World;
 class InstanceInfo
 {
     private final int worldId;
-    private final int y;
+    private final Coord confirmed;
+    private final Coord prediction;
     private final long time;
 
     private transient World world;
     private transient int worldLocation;
+
+    public int getY()
+    {
+        return confirmed.getY();
+    }
+
+    public long getTime()
+    {
+        return confirmed.getTime();
+    }
+
+    @RequiredArgsConstructor
+    @Data
+    static class Coord
+    {
+        private final long time;
+        private final int y;
+    }
 }
