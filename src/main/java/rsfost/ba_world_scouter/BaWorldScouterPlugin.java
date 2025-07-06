@@ -86,6 +86,7 @@ public class BaWorldScouterPlugin extends Plugin
 	private boolean shouldCheckLocation;
 	private int lastRegionId;
 	private ScheduledFuture<?> fetchWorldsFuture;
+	private volatile boolean updatingWorlds;
 
 	@Override
 	protected void startUp() throws Exception
@@ -167,13 +168,22 @@ public class BaWorldScouterPlugin extends Plugin
 
 	private void updateWorlds()
 	{
+		if (updatingWorlds)
+		{
+			log.info("Instance info update in progress -- skipping this update");
+			return;
+		}
+
+		updatingWorlds = true;
 		instanceInfoService.getInstanceInfos(
 			instanceInfos -> {
+				updatingWorlds = false;
 				SwingUtilities.invokeLater(() -> {
 					panel.populate(instanceInfos);
 				});
 			},
 			error -> {
+				updatingWorlds = false;
 				log.error("Unable to update instance information", error);
 				panel.updateList();
 			}
