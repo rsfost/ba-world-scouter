@@ -69,15 +69,17 @@ class WorldTableRow extends JPanel
 
     @Getter
     private final InstanceInfo instanceInfo;
+    private final BaWorldScouterConfig config;
 
     private JLabel worldField;
     private JLabel yField;
     private JLabel popField;
     private JLabel lastUpdatedField;
 
-    public WorldTableRow(InstanceInfo instanceInfo)
+    public WorldTableRow(InstanceInfo instanceInfo, BaWorldScouterConfig config)
     {
         this.instanceInfo = instanceInfo;
+        this.config = config;
         setLayout(new BorderLayout());
         setBorder(new EmptyBorder(2, 0, 2, 0));
 
@@ -140,7 +142,19 @@ class WorldTableRow extends JPanel
         JPanel column = new JPanel(new BorderLayout());
         column.setBorder(new EmptyBorder(0, 5, 0, 5));
 
-        yField = new JLabel(formatInt(instanceInfo.getY()));
+        yField = new JLabel() {
+            @Override
+            public String getText() {
+                if (config.showPredictedValues())
+                {
+                    return formatInt(instanceInfo.getPrediction().getY());
+                }
+                else
+                {
+                    return formatInt(instanceInfo.getConfirmed().getY());
+                }
+            }
+        };
         yField.setFont(FontManager.getRunescapeSmallFont());
 
         column.add(yField, BorderLayout.EAST);

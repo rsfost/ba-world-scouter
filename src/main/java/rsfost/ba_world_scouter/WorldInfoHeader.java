@@ -106,4 +106,10 @@ class WorldInfoHeader extends JPanel
         arrowLabel.setIcon(on ? (ascending ? HIGHLIGHT_ARROW_DOWN : HIGHLIGHT_ARROW_UP) : ARROW_UP);
         textLabel.setForeground(on ? HIGHLIGHT_COLOR : ARROW_COLOR);
     }
+
+    public void setTitle(String title)
+    {
+        textLabel.setText(title);
+        this.revalidate();
+    }
 }

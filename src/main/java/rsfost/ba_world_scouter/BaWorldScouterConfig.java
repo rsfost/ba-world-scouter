@@ -30,6 +30,17 @@ public interface BaWorldScouterConfig extends Config
         return IndicatorDisplayMode.INFO_BOX_AND_CHAT;
     }
 
+    @ConfigItem(
+        keyName = "showPredictedValues",
+        name = "Show predictions",
+        description = "Show predicted Y values instead of confirmed Y values",
+        position = 3
+    )
+    default boolean showPredictedValues()
+    {
+        return false;
+    }
+
     @RequiredArgsConstructor
     enum IndicatorDisplayMode
     {

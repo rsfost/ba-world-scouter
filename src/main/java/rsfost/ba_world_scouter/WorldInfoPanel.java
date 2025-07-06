@@ -27,6 +27,8 @@
 package rsfost.ba_world_scouter;
 
 import com.google.common.collect.Ordering;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
@@ -51,6 +53,7 @@ class WorldInfoPanel extends PluginPanel
     private static final int LAST_UPDATED_COLUMN_WIDTH = 47;
 
     private final BaWorldScouterPlugin plugin;
+    private final BaWorldScouterConfig config;
     private final JPanel listContainer;
 
     private WorldOrder orderIndex = WorldOrder.WORLD;
@@ -63,9 +66,10 @@ class WorldInfoPanel extends PluginPanel
     private WorldInfoHeader popHeader;
     private WorldInfoHeader lastUpdatedHeader;
 
-    public WorldInfoPanel(BaWorldScouterPlugin plugin)
+    public WorldInfoPanel(BaWorldScouterPlugin plugin, BaWorldScouterConfig config)
     {
         this.plugin = plugin;
+        this.config = config;
 
         setBorder(null);
         setLayout(new DynamicGridLayout(0, 1));
@@ -84,7 +88,7 @@ class WorldInfoPanel extends PluginPanel
 
         for (InstanceInfo instanceInfo : worlds)
         {
-            WorldTableRow row = new WorldTableRow(instanceInfo);
+            WorldTableRow row = new WorldTableRow(instanceInfo, config);
             rows.add(row);
         }
         updateList();
@@ -98,7 +102,17 @@ class WorldInfoPanel extends PluginPanel
             switch (orderIndex)
             {
                 case INSTANCE_Y:
-                    return getCompareValue(r1, r2, row -> row.getInstanceInfo().getY());
+                    return getCompareValue(r1, r2, row ->
+                    {
+                        if (config.showPredictedValues())
+                        {
+                            return row.getInstanceInfo().getPrediction().getY();
+                        }
+                        else
+                        {
+                            return row.getInstanceInfo().getConfirmed().getY();
+                        }
+                    });
                 case WORLD:
                     return getCompareValue(r1, r2, row -> row.getInstanceInfo().getWorldId());
                 case POPULATION:
@@ -150,6 +164,18 @@ class WorldInfoPanel extends PluginPanel
 
     }
 
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        if ("ba_world_scouter".equals(event.getGroup()) && "showPredictedValues".equals(event.getKey()))
+        {
+            SwingUtilities.invokeLater(() -> {
+                yHeader.setTitle(config.showPredictedValues() ? "~Y" : "Y");
+                this.updateList();
+            });
+        }
+    }
+
     private void orderBy(WorldOrder order)
     {
         yHeader.highlight(false, ascendingOrder);
@@ -183,7 +209,8 @@ class WorldInfoPanel extends PluginPanel
         JPanel leftSide = new JPanel(new BorderLayout());
         JPanel rightSide = new JPanel(new BorderLayout());
 
-        yHeader = new WorldInfoHeader("Y", orderIndex == WorldOrder.INSTANCE_Y, ascendingOrder);
+        String yTitle = config.showPredictedValues() ? "~Y" : "Y";
+        yHeader = new WorldInfoHeader(yTitle, orderIndex == WorldOrder.INSTANCE_Y, ascendingOrder);
         yHeader.setPreferredSize(new Dimension(Y_COLUMN_WIDTH, 20));
         yHeader.addMouseListener(new MouseAdapter()
         {

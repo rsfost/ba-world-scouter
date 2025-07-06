@@ -92,7 +92,7 @@ public class BaWorldScouterPlugin extends Plugin
 	protected void startUp() throws Exception
 	{
 		BufferedImage icon = ImageUtil.loadImageResource(BaWorldScouterPlugin.class, "icon.png");
-		panel = new WorldInfoPanel(this);
+		panel = new WorldInfoPanel(this, config);
 		navButton = NavigationButton.builder()
 			.tooltip("BA World Scouter")
 			.priority(4)
@@ -100,6 +100,7 @@ public class BaWorldScouterPlugin extends Plugin
 			.icon(icon)
 			.build();
 		clientToolbar.addNavigation(navButton);
+		eventBus.register(panel);
 
 		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::updateWorlds, 10, 30, TimeUnit.SECONDS);
 		eventBus.register(instanceInfoService);
@@ -116,6 +117,7 @@ public class BaWorldScouterPlugin extends Plugin
 		fetchWorldsFuture.cancel(true);
 		clientToolbar.removeNavigation(navButton);
 		eventBus.unregister(instanceInfoService);
+		eventBus.unregister(panel);
 		setInfoBoxVisible(false);
 	}
 
