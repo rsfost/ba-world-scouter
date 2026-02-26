@@ -15,12 +15,16 @@ import net.runelite.client.game.WorldService;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldResult;
 import okhttp3.*;
+import okio.BufferedSource;
 
 import javax.inject.Inject;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -37,8 +41,13 @@ class InstanceInfoService
     private final OkHttpClient httpClient;
     private final Gson gson;
 
+    private final ExecutorService sseExecutor = Executors.newSingleThreadExecutor();
+
+    private Future<?> sseFuture;
+
     private volatile Map<Integer, World> allWorlds;
     private volatile EnumComposition worldLocations;
+    private volatile boolean streaming;
 
     @Inject
     public InstanceInfoService(
@@ -164,6 +173,101 @@ class InstanceInfoService
     public void onWorldsFetch(WorldsFetch event)
     {
         updateWorlds();
+    }
+
+    public void startWorldStream(Consumer<InstanceInfo> consumer)
+    {
+        stopWorldStream();
+        streaming = true;
+
+        Request request = new Request.Builder()
+            .url(API_BASE + "/worlds/stream")
+            .addHeader("Accept", "text/event-stream")
+            .build();
+
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.error("Network error starting SSE stream", e);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+            {
+                sseFuture = sseExecutor.submit(() -> processSseStream(response, consumer));
+            }
+        });
+    }
+
+    private void processSseStream(Response response, Consumer<InstanceInfo> consumer)
+    {
+        if (!response.isSuccessful())
+        {
+            log.error("Unable to start world stream (http {})", response.code());
+            response.close();
+            sleepBeforeReconnect();
+            if (streaming)
+            {
+                startWorldStream(consumer);
+            }
+            return;
+        }
+
+        final String dataLabel = "data:";
+        try (BufferedSource source = response.body().source())
+        {
+            String line;
+            while ((line = source.readUtf8Line()) != null && !source.exhausted())
+            {
+                if (line.startsWith(dataLabel))
+                {
+                    InstanceInfo update = gson.fromJson(line.substring(dataLabel.length()), InstanceInfo.class);
+                    if (allWorlds != null)
+                    {
+                        update.setWorld(allWorlds.get(update.getWorldId()));
+                    }
+                    if (worldLocations != null)
+                    {
+                        update.setWorldLocation(worldLocations.getIntValue(update.getWorldId()));
+                    }
+                    consumer.accept(update);
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            log.error("IO error reading SSE stream", e);
+        }
+
+        sleepBeforeReconnect();
+        if (streaming)
+        {
+            startWorldStream(consumer);
+        }
+    }
+
+    private void sleepBeforeReconnect()
+    {
+        try
+        {
+            Thread.sleep(5000);
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public void stopWorldStream()
+    {
+        streaming = false;
+        if (sseFuture != null)
+        {
+            sseFuture.cancel(true);
+            sseFuture = null;
+        }
     }
 
     private boolean updateWorlds()

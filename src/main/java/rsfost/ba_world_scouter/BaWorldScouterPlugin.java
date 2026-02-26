@@ -103,6 +103,11 @@ public class BaWorldScouterPlugin extends Plugin
 		eventBus.register(panel);
 
 		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::updateWorlds, 10, 30, TimeUnit.SECONDS);
+		instanceInfoService.startWorldStream((update) -> {
+			SwingUtilities.invokeLater(() -> {
+				panel.patch(update);
+			});
+		});
 		eventBus.register(instanceInfoService);
 
 		if (premoveInfoBox == null)
@@ -117,6 +122,7 @@ public class BaWorldScouterPlugin extends Plugin
 		fetchWorldsFuture.cancel(true);
 		clientToolbar.removeNavigation(navButton);
 		eventBus.unregister(instanceInfoService);
+		instanceInfoService.stopWorldStream();
 		eventBus.unregister(panel);
 		setInfoBoxVisible(false);
 	}

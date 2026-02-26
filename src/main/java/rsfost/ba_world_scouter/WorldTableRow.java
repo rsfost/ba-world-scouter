@@ -26,6 +26,7 @@
 package rsfost.ba_world_scouter;
 
 import lombok.Getter;
+import lombok.Setter;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.http.api.worlds.World;
@@ -67,9 +68,10 @@ class WorldTableRow extends JPanel
     private static final int LOCATION_US_WEST = -73;
     private static final int LOCATION_US_EAST = -42;
 
-    @Getter
-    private final InstanceInfo instanceInfo;
     private final BaWorldScouterConfig config;
+
+    @Getter @Setter
+    private InstanceInfo instanceInfo;
 
     private JLabel worldField;
     private JLabel yField;

@@ -38,6 +38,8 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -60,6 +62,7 @@ class WorldInfoPanel extends PluginPanel
     private boolean ascendingOrder = true;
 
     private final ArrayList<WorldTableRow> rows = new ArrayList<>();
+    private final Map<Integer, WorldTableRow> rowLookup = new HashMap<>();
 
     private WorldInfoHeader worldHeader;
     private WorldInfoHeader yHeader;
@@ -85,11 +88,29 @@ class WorldInfoPanel extends PluginPanel
     void populate(InstanceInfo[] worlds)
     {
         rows.clear();
+        rowLookup.clear();
 
         for (InstanceInfo instanceInfo : worlds)
         {
             WorldTableRow row = new WorldTableRow(instanceInfo, config);
             rows.add(row);
+            rowLookup.put(instanceInfo.getWorldId(), row);
+        }
+        updateList();
+    }
+
+    void patch(InstanceInfo patch)
+    {
+        WorldTableRow row = rowLookup.get(patch.getWorldId());
+        if (row != null)
+        {
+            row.setInstanceInfo(patch);
+        }
+        else
+        {
+            row = new WorldTableRow(patch, config);
+            rows.add(row);
+            rowLookup.put(patch.getWorldId(), row);
         }
         updateList();
     }
