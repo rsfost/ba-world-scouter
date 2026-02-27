@@ -27,7 +27,7 @@ dependencies {
 }
 
 group = 'rsfost.ba_world_scouter'
-version = '0.4'
+version = '1.0'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
