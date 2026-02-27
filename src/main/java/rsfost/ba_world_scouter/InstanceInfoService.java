@@ -43,11 +43,11 @@ class InstanceInfoService
 
     private final ExecutorService sseExecutor = Executors.newSingleThreadExecutor();
 
-    private Future<?> sseFuture;
-
     private volatile Map<Integer, World> allWorlds;
     private volatile EnumComposition worldLocations;
     private volatile boolean streaming;
+    private volatile Future<?> sseFuture;
+    private volatile int sseFailCount;
 
     @Inject
     public InstanceInfoService(
@@ -188,15 +188,22 @@ class InstanceInfoService
         httpClient.newCall(request).enqueue(new Callback()
         {
             @Override
-            public void onFailure(Call call, IOException e)
-            {
-                log.error("Network error starting SSE stream", e);
-            }
-
-            @Override
             public void onResponse(Call call, Response response)
             {
                 sseFuture = sseExecutor.submit(() -> processSseStream(response, consumer));
+            }
+
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.error("Network error starting SSE stream", e);
+                sseFuture = sseExecutor.submit(() -> {
+                    sleepBeforeReconnect();
+                    if (streaming)
+                    {
+                        startWorldStream(consumer);
+                    }
+                });
             }
         });
     }
@@ -214,6 +221,8 @@ class InstanceInfoService
             }
             return;
         }
+
+        sseFailCount = 0;
 
         final String dataLabel = "data:";
         try (BufferedSource source = response.body().source())
@@ -252,7 +261,8 @@ class InstanceInfoService
     {
         try
         {
-            Thread.sleep(5000);
+            // exponential backoff
+            Thread.sleep(1000 * (1L << Math.min(6, sseFailCount++)));
         }
         catch (InterruptedException e)
         {
