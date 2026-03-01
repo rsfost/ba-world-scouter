@@ -19,6 +19,7 @@ import okio.BufferedSource;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -202,7 +203,7 @@ class InstanceInfoService
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.error("Network error starting SSE stream", e);
+                logSseError(() -> log.error("Network error starting SSE stream", e));
                 sseFuture = sseExecutor.submit(() -> {
                     sleepBeforeReconnect();
                     if (streaming)
@@ -218,7 +219,7 @@ class InstanceInfoService
     {
         if (!response.isSuccessful())
         {
-            log.error("Unable to start world stream (http {})", response.code());
+            logSseError(() -> log.error("Unable to start SSE stream (http {})", response.code()));
             response.close();
             sleepBeforeReconnect();
             if (streaming)
@@ -253,7 +254,14 @@ class InstanceInfoService
         }
         catch (IOException e)
         {
-            log.error("IO error reading SSE stream", e);
+            if (e instanceof InterruptedIOException)
+            {
+                log.debug("Thread interrupted", e);
+            }
+            else
+            {
+                logSseError(() -> log.error("IO error reading SSE stream", e));
+            }
         }
 
         sleepBeforeReconnect();
@@ -288,6 +296,15 @@ class InstanceInfoService
         {
             sseExecutor.shutdown();
             sseExecutor = null;
+        }
+    }
+
+    // SSE error duplication
+    private void logSseError(Runnable runnable)
+    {
+        if (sseFailCount == 0)
+        {
+            runnable.run();
         }
     }
 
