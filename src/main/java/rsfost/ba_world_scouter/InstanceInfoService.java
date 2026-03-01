@@ -41,12 +41,11 @@ class InstanceInfoService
     private final OkHttpClient httpClient;
     private final Gson gson;
 
-    private final ExecutorService sseExecutor = Executors.newSingleThreadExecutor();
-
     private volatile Map<Integer, World> allWorlds;
     private volatile EnumComposition worldLocations;
-    private volatile boolean streaming;
+    private volatile ExecutorService sseExecutor;
     private volatile Future<?> sseFuture;
+    private volatile boolean streaming;
     private volatile int sseFailCount;
 
     @Inject
@@ -177,7 +176,14 @@ class InstanceInfoService
 
     public void startWorldStream(Consumer<InstanceInfo> consumer)
     {
-        stopWorldStream();
+        if (sseFuture != null && !sseFuture.isDone())
+        {
+            sseFuture.cancel(true);
+        }
+        if (sseExecutor == null || sseExecutor.isShutdown())
+        {
+            sseExecutor = Executors.newSingleThreadExecutor();
+        }
         streaming = true;
 
         Request request = new Request.Builder()
@@ -277,6 +283,11 @@ class InstanceInfoService
         {
             sseFuture.cancel(true);
             sseFuture = null;
+        }
+        if (sseExecutor != null)
+        {
+            sseExecutor.shutdown();
+            sseExecutor = null;
         }
     }
 
