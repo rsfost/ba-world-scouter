@@ -21,6 +21,7 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -99,7 +100,10 @@ public class BaWorldScouterPlugin extends Plugin
 			.panel(panel)
 			.icon(icon)
 			.build();
-		clientToolbar.addNavigation(navButton);
+		if (!config.hideSidePanel())
+		{
+			clientToolbar.addNavigation(navButton);
+		}
 		eventBus.register(panel);
 
 		fetchWorldsFuture = executorService.scheduleAtFixedRate(this::updateWorlds, 10, 30, TimeUnit.SECONDS);
@@ -167,6 +171,26 @@ public class BaWorldScouterPlugin extends Plugin
 		if (gameStateChanged.getGameState() == GameState.LOADING)
 		{
 			shouldCheckLocation = true;
+		}
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged configChanged)
+	{
+		if (!CONFIG_GROUP.equals(configChanged.getGroup()))
+		{
+			return;
+		}
+		if (HIDE_SIDE_PANEL.equals(configChanged.getKey()))
+		{
+			if (config.hideSidePanel())
+			{
+				clientToolbar.removeNavigation(navButton);
+			}
+			else
+			{
+				clientToolbar.addNavigation(navButton);
+			}
 		}
 	}
 

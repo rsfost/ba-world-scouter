@@ -5,11 +5,17 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("ba_world_scouter")
+@ConfigGroup(BaWorldScouterConfig.CONFIG_GROUP)
 public interface BaWorldScouterConfig extends Config
 {
+    String CONFIG_GROUP = "ba_world_scouter";
+    String INDICATOR_ACTIVE_MODE = "indicatorActiveMode";
+    String INDICATOR_DISPLAY_MODE = "indicatorDisplayMode";
+    String SHOW_PREDICTED_VALUES = "showPredictedValues";
+    String HIDE_SIDE_PANEL = "hideSidePanel";
+
     @ConfigItem(
-        keyName = "indicatorActiveMode",
+        keyName = INDICATOR_ACTIVE_MODE,
         name = "Indication condition",
         description = "When to display the premove indicator",
         position = 1
@@ -20,7 +26,7 @@ public interface BaWorldScouterConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "indicatorDisplayMode",
+        keyName = INDICATOR_DISPLAY_MODE,
         name = "Indication display",
         description = "How to display the premove indicator",
         position = 2
@@ -31,12 +37,23 @@ public interface BaWorldScouterConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "showPredictedValues",
+        keyName = SHOW_PREDICTED_VALUES,
         name = "Show predictions",
         description = "Show predicted Y values instead of confirmed Y values",
         position = 3
     )
     default boolean showPredictedValues()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = HIDE_SIDE_PANEL,
+        name = "Hide side panel",
+        description = "Hide the world list side panel",
+        position = 4
+    )
+    default boolean hideSidePanel()
     {
         return false;
     }
