@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Live world list for the BA World Scouter RuneLite plugin." />
+    <title>BA World Scouter</title>
+    <script>
+      // Stamp the saved theme before first paint so a dark-mode reload never
+      // flashes the light palette.
+      try {
+        const saved = localStorage.getItem('ba-scout-theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.dataset.theme = saved;
+        }
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
