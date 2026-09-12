@@ -8,6 +8,12 @@ import uk from '../assets/flags/uk.png';
 import us from '../assets/flags/us.png';
 import za from '../assets/flags/za.png';
 
+/*
+ * The sprites in ../assets/flags are unmodified copies of the world hopper
+ * flags from RuneLite, used under BSD-2-Clause. See public/NOTICE.txt, which
+ * ships with the site and carries the required copyright notice.
+ */
+
 /** The regions the plugin ships a flag sprite for. */
 export type RegionCode = 'aus' | 'br' | 'ger' | 'jp' | 'sg' | 'uk' | 'us' | 'za';
 

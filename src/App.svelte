@@ -6,6 +6,10 @@
   import StatusBadge from './components/StatusBadge.svelte';
   import ThemeToggle from './components/ThemeToggle.svelte';
 
+  // Always ends in a slash, and carries the /ba-world-scouter/ prefix in
+  // production builds.
+  const base = import.meta.env.BASE_URL;
+
   const store = new WorldStore();
   let filter = $state('');
 
@@ -58,7 +62,12 @@
       Updated {formatAge(lastUpdateAge)} ago
     {/if}
   </span>
-  <a href="https://github.com/rsfost/ba-world-scouter/tree/web">Source</a>
+  <span class="links">
+    <!-- The flag sprites are BSD-2-Clause material from RuneLite; the license
+         requires the notice to travel with the deployed bundle. -->
+    <a href="{base}NOTICE.txt">Flag icons from RuneLite (BSD-2-Clause)</a>
+    <a href="https://github.com/rsfost/ba-world-scouter/tree/web">Source</a>
+  </span>
 </footer>
 
 <style>
@@ -142,6 +151,12 @@
 
   footer a {
     color: inherit;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
   @media (max-width: 520px) {
