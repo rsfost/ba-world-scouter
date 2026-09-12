@@ -19,14 +19,15 @@ import okio.BufferedSource;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,7 @@ class InstanceInfoService
 
     private final Client client;
     private final ClientThread clientThread;
+    private final ScheduledExecutorService executorService;
     private final WorldService worldService;
     private final OkHttpClient httpClient;
     private final Gson gson;
@@ -45,7 +47,8 @@ class InstanceInfoService
     private volatile Map<Integer, World> allWorlds;
     private volatile EnumComposition worldLocations;
     private volatile ExecutorService sseExecutor;
-    private volatile Future<?> sseFuture;
+    private volatile Call sseCall;
+    private volatile ScheduledFuture<?> reconnectFuture;
     private volatile boolean streaming;
     private volatile int sseFailCount;
 
@@ -56,6 +59,7 @@ class InstanceInfoService
     {
         this.client = client;
         this.clientThread = clientThread;
+        this.executorService = executorService;
         this.worldService = worldService;
         this.httpClient = httpClient;
         this.gson = gson;
@@ -177,63 +181,65 @@ class InstanceInfoService
 
     public void startWorldStream(Consumer<InstanceInfo> consumer)
     {
-        if (sseFuture != null && !sseFuture.isDone())
-        {
-            sseFuture.cancel(true);
-        }
+        streaming = true;
         if (sseExecutor == null || sseExecutor.isShutdown())
         {
-            sseExecutor = Executors.newSingleThreadExecutor();
+            sseExecutor = Executors.newSingleThreadExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "ba-world-scouter-sse");
+                thread.setDaemon(true);
+                return thread;
+            });
         }
-        streaming = true;
+        connect(consumer);
+    }
+
+    private void connect(Consumer<InstanceInfo> consumer)
+    {
+        Call previousCall = sseCall;
+        if (previousCall != null)
+        {
+            previousCall.cancel();
+        }
 
         Request request = new Request.Builder()
             .url(API_BASE + "/worlds/stream")
             .addHeader("Accept", "text/event-stream")
             .build();
 
-        httpClient.newCall(request).enqueue(new Callback()
-        {
-            @Override
-            public void onResponse(Call call, Response response)
-            {
-                sseFuture = sseExecutor.submit(() -> processSseStream(response, consumer));
-            }
+        Call call = httpClient.newCall(request);
+        sseCall = call;
 
-            @Override
-            public void onFailure(Call call, IOException e)
-            {
-                logSseError(() -> log.error("Network error starting SSE stream", e));
-                sseFuture = sseExecutor.submit(() -> {
-                    sleepBeforeReconnect();
-                    if (streaming)
-                    {
-                        startWorldStream(consumer);
-                    }
-                });
-            }
-        });
-    }
-
-    private void processSseStream(Response response, Consumer<InstanceInfo> consumer)
-    {
-        if (!response.isSuccessful())
+        ExecutorService executor = sseExecutor;
+        if (executor == null)
         {
-            logSseError(() -> log.error("Unable to start SSE stream (http {})", response.code()));
-            response.close();
-            sleepBeforeReconnect();
-            if (streaming)
-            {
-                startWorldStream(consumer);
-            }
             return;
         }
-
-        sseFailCount = 0;
-
-        final String dataLabel = "data:";
-        try (BufferedSource source = response.body().source())
+        try
         {
+            executor.execute(() -> processSseStream(call, consumer));
+        }
+        catch (RejectedExecutionException e)
+        {
+            // The stream was stopped between us reading sseExecutor and submitting
+            log.debug("SSE stream stopped before connecting");
+        }
+    }
+
+    private void processSseStream(Call call, Consumer<InstanceInfo> consumer)
+    {
+        final String dataLabel = "data:";
+        try (Response response = call.execute())
+        {
+            if (!response.isSuccessful())
+            {
+                logSseError(() -> log.error("Unable to start SSE stream (http {})", response.code()));
+                scheduleReconnect(consumer);
+                return;
+            }
+
+            sseFailCount = 0;
+
+            BufferedSource source = response.body().source();
             String line;
             while ((line = source.readUtf8Line()) != null && !source.exhausted())
             {
@@ -254,43 +260,49 @@ class InstanceInfoService
         }
         catch (IOException e)
         {
-            if (e instanceof InterruptedIOException)
+            if (call.isCanceled())
             {
-                log.debug("Thread interrupted", e);
+                log.debug("SSE stream cancelled", e);
+                return;
             }
-            else
-            {
-                logSseError(() -> log.error("IO error reading SSE stream", e));
-            }
+            logSseError(() -> log.error("IO error reading SSE stream", e));
         }
 
-        sleepBeforeReconnect();
-        if (streaming)
+        if (call.isCanceled())
         {
-            startWorldStream(consumer);
+            return;
         }
+        scheduleReconnect(consumer);
     }
 
-    private void sleepBeforeReconnect()
+    private void scheduleReconnect(Consumer<InstanceInfo> consumer)
     {
-        try
+        if (!streaming)
         {
-            // exponential backoff
-            Thread.sleep(1000 * (1L << Math.min(6, sseFailCount++)));
+            return;
         }
-        catch (InterruptedException e)
-        {
-            Thread.currentThread().interrupt();
-        }
+        // exponential backoff
+        final long delay = 1000 * (1L << Math.min(6, sseFailCount++));
+        reconnectFuture = executorService.schedule(() -> {
+            if (streaming)
+            {
+                connect(consumer);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 
     public void stopWorldStream()
     {
         streaming = false;
-        if (sseFuture != null)
+        if (reconnectFuture != null)
         {
-            sseFuture.cancel(true);
-            sseFuture = null;
+            reconnectFuture.cancel(false);
+            reconnectFuture = null;
+        }
+        if (sseCall != null)
+        {
+            sseCall.cancel();
+            sseCall = null;
         }
         if (sseExecutor != null)
         {

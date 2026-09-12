@@ -123,7 +123,7 @@ public class BaWorldScouterPlugin extends Plugin
 	@Override
 	protected void shutDown() throws Exception
 	{
-		fetchWorldsFuture.cancel(true);
+		fetchWorldsFuture.cancel(false);
 		clientToolbar.removeNavigation(navButton);
 		eventBus.unregister(instanceInfoService);
 		instanceInfoService.stopWorldStream();
