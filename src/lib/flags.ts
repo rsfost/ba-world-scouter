@@ -6,6 +6,8 @@ import jp from '../assets/flags/jp.png';
 import sg from '../assets/flags/sg.png';
 import uk from '../assets/flags/uk.png';
 import us from '../assets/flags/us.png';
+import usEast from '../assets/flags/us_east.png';
+import usWest from '../assets/flags/us_west.png';
 import za from '../assets/flags/za.png';
 
 /*
@@ -15,7 +17,17 @@ import za from '../assets/flags/za.png';
  */
 
 /** The regions the plugin ships a flag sprite for. */
-export type RegionCode = 'aus' | 'br' | 'ger' | 'jp' | 'sg' | 'uk' | 'us' | 'za';
+export type RegionCode =
+  | 'aus'
+  | 'br'
+  | 'ger'
+  | 'jp'
+  | 'sg'
+  | 'uk'
+  | 'us'
+  | 'us_east'
+  | 'us_west'
+  | 'za';
 
 export interface Flag {
   src: string;
@@ -30,6 +42,8 @@ const FLAGS: Readonly<Record<RegionCode, Flag>> = {
   sg: { src: sg, country: 'Singapore' },
   uk: { src: uk, country: 'United Kingdom' },
   us: { src: us, country: 'United States' },
+  us_east: { src: usEast, country: 'United States (East)' },
+  us_west: { src: usWest, country: 'United States (West)' },
   za: { src: za, country: 'South Africa' },
 };
 
@@ -37,8 +51,8 @@ const FLAGS: Readonly<Record<RegionCode, Flag>> = {
  * Flag for a world, or undefined for one missing from the generated table —
  * a world added since the last `npm run worlds`.
  *
- * The plugin further splits US worlds into east and west coast sprites, but
- * that split comes from a game-cache enum the browser has no access to.
+ * US worlds carry their east/west coast, which `npm run worlds` reads from the
+ * game cache; plain 'us' is the fallback for a world the cache doesn't place.
  */
 export function flagFor(worldId: number): Flag | undefined {
   const region = WORLD_REGIONS[worldId];

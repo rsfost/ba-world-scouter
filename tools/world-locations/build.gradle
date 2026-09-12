@@ -1,0 +1,34 @@
+plugins {
+	id 'application'
+}
+
+repositories {
+	maven {
+		url = 'https://repo.runelite.net'
+		content {
+			includeGroupByRegex("net\\.runelite.*")
+		}
+	}
+	mavenCentral()
+}
+
+dependencies {
+	// Pinned rather than latest.release so a RuneLite release can't silently
+	// change how the cache is decoded between runs.
+	implementation('net.runelite:cache:1.12.38') {
+		// Keep stdout clean for the JSON; slf4j-nop below silences logging.
+		exclude group: 'org.slf4j', module: 'slf4j-simple'
+	}
+	// The cache library only pulls gson in at runtime.
+	implementation 'com.google.code.gson:gson:2.10.1'
+	runtimeOnly 'org.slf4j:slf4j-nop:1.7.36'
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.release.set(11)
+}
+
+application {
+	mainClass = 'rsfost.world_locations.WorldLocations'
+}
