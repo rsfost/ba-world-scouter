@@ -43,6 +43,18 @@
   </div>
 </header>
 
+<div class="plug-wrap">
+  <aside class="plug">
+    <span>
+      World info is crowd-sourced by players running the
+      <strong>BA World Scouter</strong> RuneLite plugin.
+    </span>
+    <a href="https://runelite.net/plugin-hub/show/ba-world-scouter" target="_blank" rel="noopener">
+      Install it to contribute&nbsp;→
+    </a>
+  </aside>
+</div>
+
 {#if store.error}
   <p class="error" role="alert">
     Could not reach the API: {store.error}
@@ -72,6 +84,7 @@
 
 <style>
   header,
+  .plug-wrap,
   main,
   footer {
     max-width: 900px;
@@ -105,6 +118,39 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
+  }
+
+  .plug {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .plug strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .plug a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .plug a:hover,
+  .plug a:focus-visible {
+    text-decoration: underline;
   }
 
   input {
